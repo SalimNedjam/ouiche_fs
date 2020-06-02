@@ -17,7 +17,7 @@
 #define OUICHEFS_MAX_FILESIZE     (1 << 22)  /* 4 MiB */
 #define OUICHEFS_FILENAME_LEN            28
 #define OUICHEFS_MAX_SUBFILES           128
-
+#define PERCENTAGE			10
 
 /*
  * ouiche_fs partition layout
@@ -102,7 +102,9 @@ extern const struct address_space_operations ouichefs_aops;
 
 /* Getters for superbock and inode */
 #define OUICHEFS_SB(sb) (sb->s_fs_info)
+#define OUICHEFS_TOTAL_BLOCK(sb) (sb->nr_blocks - sb->nr_inodes / OUICHEFS_INODES_PER_BLOCK)
 #define OUICHEFS_INODE(inode) (container_of(inode, struct ouichefs_inode_info, \
 					    vfs_inode))
+extern void (*trigger_search)(struct file **);
 
 #endif	/* _OUICHEFS_H */

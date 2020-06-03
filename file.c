@@ -115,7 +115,7 @@ static int ouichefs_write_begin(struct file *file,
 		nr_allocs = 0;
 
 	if (nb_blocs * PERCENTAGE / 100 > sbi->nr_free_blocks)
-		trigger_search(file_to_delete);
+		trigger_search();
 	
 	if (nr_allocs > sbi->nr_free_blocks)
 		goto NOSPACE;

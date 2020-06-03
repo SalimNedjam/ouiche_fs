@@ -105,6 +105,6 @@ extern const struct address_space_operations ouichefs_aops;
 #define OUICHEFS_TOTAL_BLOCK(sb) (sb->nr_blocks - sb->nr_inodes / OUICHEFS_INODES_PER_BLOCK)
 #define OUICHEFS_INODE(inode) (container_of(inode, struct ouichefs_inode_info, \
 					    vfs_inode))
-extern void (*trigger_search)(struct file **);
+extern void (*trigger_search)(void);
 
 #endif	/* _OUICHEFS_H */

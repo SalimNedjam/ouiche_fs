@@ -229,11 +229,11 @@ struct inode *search_oldest(struct inode *dir)
 		pr_info("check date of %s\n",f->filename);
 		cinode = ouichefs_inode_get(sb, f->inode);
 		
-		if (S_ISDIR(cinode->i_mode)) {
-			cinode = search_oldest(cinode);
-		} 
-		if (cinode != NULL && cinode->i_mtime > timestamp_min)
-			oldest_cinode = cinode;
+	// 	if (S_ISDIR(cinode->i_mode)) {
+	// 		cinode = search_oldest(cinode);
+	// 	} 
+	// 	if (cinode != NULL && cinode->i_mtime > timestamp_min)
+	// 		oldest_cinode = cinode;
 
 	}
 	brelse(bh);
@@ -342,7 +342,7 @@ static int ouichefs_create(struct inode *dir, struct dentry *dentry,
 	/* Check if parent directory is full */
 	if (dblock->files[OUICHEFS_MAX_SUBFILES - 1].inode != 0) {
 		ret = -EMLINK;
-		trigger_search(file_to_delete);
+		trigger_search();
 		goto end;
 	}
 

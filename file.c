@@ -16,9 +16,6 @@
 #include "ouichefs.h"
 #include "bitmap.h"
 
-
-
-
 /*
  * Map the buffer_head passed in argument with the iblock-th block of the file
  * represented by inode. If the requested block is not allocated and create is
@@ -104,10 +101,9 @@ static int ouichefs_write_begin(struct file *file,
 	int err;
 	uint32_t nr_allocs = 0;
 	uint32_t nb_blocs = OUICHEFS_TOTAL_BLOCK(sbi);
-	struct file **file_to_delete;
 	/* Check if the write can be completed (enough space?) */
 	if (pos + len > OUICHEFS_MAX_FILESIZE)
-		goto NOSPACE;
+		return -ENOSPC;
 	nr_allocs = max(pos + len, file->f_inode->i_size) / OUICHEFS_BLOCK_SIZE;
 	if (nr_allocs > file->f_inode->i_blocks - 1)
 		nr_allocs -= file->f_inode->i_blocks - 1;
@@ -115,11 +111,11 @@ static int ouichefs_write_begin(struct file *file,
 		nr_allocs = 0;
 
 	if (nb_blocs * PERCENTAGE / 100 > sbi->nr_free_blocks)
-		trigger_search();
-	
+		trigger_search(root_inode);
+
 	if (nr_allocs > sbi->nr_free_blocks)
-		goto NOSPACE;
-	
+		return -ENOSPC;
+
 	/* prepare the write */
 	err = block_write_begin(mapping, pos, len, flags, pagep,
 				ouichefs_file_get_block);
@@ -129,13 +125,6 @@ static int ouichefs_write_begin(struct file *file,
 		       __func__, __LINE__);
 	}
 	return err;
-
-NOSPACE:
-	put_block(OUICHEFS_SB(file->f_inode->i_sb), OUICHEFS_INODE(file->f_inode)->index_block);
-	put_inode(OUICHEFS_SB(file->f_inode->i_sb), file->f_inode->i_ino);
-	iput(file->f_inode);
-
-	return -ENOSPC;
 }
 
 /*

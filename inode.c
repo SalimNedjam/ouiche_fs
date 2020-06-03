@@ -53,11 +53,8 @@ struct inode *ouichefs_iget(struct super_block *sb, unsigned long ino)
 	cinode = (struct ouichefs_inode *)bh->b_data;
 	cinode += inode_shift;
 
-		return ERR_PTR(-ENOMEM);
-	/* If inode is in cache, return it */
-	if (!(inode->i_state & I_NEW))
 	inode->i_ino = ino;
-	inode->i_sb = sb;  
+	inode->i_sb = sb;
 	inode->i_op = &ouichefs_inode_ops;
 
 	inode->i_mode = le32_to_cpu(cinode->i_mode);
@@ -95,54 +92,40 @@ failed:
 	return ERR_PTR(ret);
 }
 
-
-/*
- * Get inode ino from disk.
- */
-struct inode *ouichefs_inode_get(struct super_block *sb, unsigned long ino)
+void search(struct inode *dir)
 {
+	struct super_block *sb = dir->i_sb;
+	struct ouichefs_inode_info *ci_dir = OUICHEFS_INODE(dir);
 	struct inode *inode = NULL;
-	struct ouichefs_inode *cinode = NULL;
-	struct ouichefs_inode_info *ci = NULL;
-	struct ouichefs_sb_info *sbi = OUICHEFS_SB(sb);
 	struct buffer_head *bh = NULL;
-	uint32_t inode_block = (ino / OUICHEFS_INODES_PER_BLOCK) + 1;
-	uint32_t inode_shift = ino % OUICHEFS_INODES_PER_BLOCK;
-	int ret;
+	struct ouichefs_dir_block *dblock = NULL;
+	struct ouichefs_file *f = NULL;
+	int i;
 
-	/* Fail if ino is out of range */
-	if (ino >= sbi->nr_inodes)
-		return ERR_PTR(-EINVAL);
 
-	/* Get a locked inode from Linux */
-	inode = iget_locked(sb, ino);
-	if (!inode)
-		return ERR_PTR(-ENOMEM);
-	/* If inode is in cache, return it */
-	if (!(inode->i_state & I_NEW))
-		return inode;
+	/* Read the directory index block on disk */
+	bh = sb_bread(sb, ci_dir->index_block);
+	if (!bh)
+		return ERR_PTR(-EIO);
+	dblock = (struct ouichefs_dir_block *)bh->b_data;
 
-	ci = OUICHEFS_INODE(inode);
-	/* Read inode from disk and initialize */
-	bh = sb_bread(sb, inode_block);
-	if (!bh) {
-		ret = -EIO;
-		goto failed;
+	/* Search for the file in directory */
+	for (i = 0; i < OUICHEFS_MAX_SUBFILES; i++) {
+		f = &dblock->files[i];
+		if (!f->inode)
+			break;
+		inode = ouichefs_iget(sb, f->inode);
+		if (S_ISDIR(inode->i_mode)) {
+			pr_info("found folder %s",f->filename);
+			search(inode);
+		} else if (S_ISREG(inode->i_mode)) {
+			pr_info("found file %s",f->filename);
+		}
 	}
-
 	brelse(bh);
-
-	/* Unlock the inode to make it usable */
-	unlock_new_inode(inode);
-
-	return inode;
-
-failed:
-	brelse(bh);
-	iget_failed(inode);
-	return ERR_PTR(ret);
 }
 
+void (*trigger_search)(struct inode *dir) = search;
 
 /*
  * Look for dentry in dir.
@@ -193,53 +176,6 @@ static struct dentry *ouichefs_lookup(struct inode *dir, struct dentry *dentry,
 	return NULL;
 }
 
-
-
-
-/*
- * Look for dentry in dir.
- * Fill dentry with NULL if not in dir, with the corresponding inode if found.
- * Returns NULL on success.
- */
-struct inode *search_oldest(struct inode *dir)
-{
-	struct super_block *sb = dir->i_sb;
-	struct ouichefs_inode_info *ci_dir = OUICHEFS_INODE(dir);
-	struct inode *inode = NULL;
-	struct buffer_head *bh = NULL;
-	struct ouichefs_dir_block *dblock = NULL;
-	struct ouichefs_file *f = NULL;
-	struct inode *cinode = NULL;
-	struct inode *oldest_cinode = NULL;
-
-	int i;
-	int timestamp_min = 0;
-
-	/* Read the directory index block on disk */
-	bh = sb_bread(sb, ci_dir->index_block);
-	if (!bh)
-		return ERR_PTR(-EIO);
-	dblock = (struct ouichefs_dir_block *)bh->b_data;
-
-	/* Search for the file in directory */
-	for (i = 0; i < OUICHEFS_MAX_SUBFILES; i++) {
-		f = &dblock->files[i];
-		if (!f->inode)
-			break;
-		pr_info("check date of %s\n",f->filename);
-		cinode = ouichefs_inode_get(sb, f->inode);
-		
-	// 	if (S_ISDIR(cinode->i_mode)) {
-	// 		cinode = search_oldest(cinode);
-	// 	} 
-	// 	if (cinode != NULL && cinode->i_mtime > timestamp_min)
-	// 		oldest_cinode = cinode;
-
-	}
-	brelse(bh);
-
-	return cinode;
-}
 /*
  * Create a new inode in dir.
  */
@@ -342,7 +278,7 @@ static int ouichefs_create(struct inode *dir, struct dentry *dentry,
 	/* Check if parent directory is full */
 	if (dblock->files[OUICHEFS_MAX_SUBFILES - 1].inode != 0) {
 		ret = -EMLINK;
-		trigger_search();
+		trigger_search(root_inode);
 		goto end;
 	}
 

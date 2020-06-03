@@ -13,16 +13,6 @@
 
 #include "ouichefs.h"
 
-void search_old(void)
-{
-	pr_info("Search run!\n");
-
-}
-
-
-
-void (*trigger_search)(void) = search_old;
-
 /*
  * Mount a ouiche_fs partition
  */

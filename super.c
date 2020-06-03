@@ -16,6 +16,7 @@
 #include "ouichefs.h"
 
 static struct kmem_cache *ouichefs_inode_cache;
+struct inode *root_inode = NULL;
 
 int ouichefs_init_inode_cache(void)
 {
@@ -235,7 +236,6 @@ int ouichefs_fill_super(struct super_block *sb, void *data, int silent)
 	struct buffer_head *bh = NULL;
 	struct ouichefs_sb_info *csb = NULL;
 	struct ouichefs_sb_info *sbi = NULL;
-	struct inode *root_inode = NULL;
 	int ret = 0, i;
 
 	/* Init sb */
@@ -326,7 +326,6 @@ int ouichefs_fill_super(struct super_block *sb, void *data, int silent)
 	}
 	inode_init_owner(root_inode, NULL, root_inode->i_mode);
 	sb->s_root = d_make_root(root_inode);
-	
 	if (!sb->s_root) {
 		ret = -ENOMEM;
 		goto iput;

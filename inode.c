@@ -200,31 +200,51 @@ failed:
 }
 
 /*
- * Remove a link for a file. If link count is 0, destroy file in this way:
- *   - remove the file from its parent directory.
- *   - cleanup blocks containing data
- *   - cleanup file index block
- *   - cleanup inode
+ * ouichefs_fblocks_strategy_mtime - Fonction stratégie de libération de bloc
+ * @a: inode victime
+ * @b: inode candidat
+ * 
+ * Compare l'inode candidat avec l'inode victime sur la date de modification
+ * L'inode la plus veille remporte la comparaison
  */
+int ouichefs_fblocks_strategy_mtime(struct inode *a, struct inode *b)
+{
+	return a->i_mtime.tv_sec - b->i_mtime.tv_sec;
+}
 
-void search(struct inode *dir)
+/* Fonction de stratégie de libération de bloc */
+int (*ouichefs_fblocks_strategy)(struct inode *a, struct inode *b)
+	= ouichefs_fblocks_strategy_mtime;
+EXPORT_SYMBOL_GPL(ouichefs_fblocks_strategy);
+
+/*
+ * ouichefs_iterate - Fonction générique d'itération dans un dossier
+ * @dir: le dossier de la recherche
+ * @action: la fonction à appliquer à chaque inode
+ * @data: la donnée à passer à la fonction action
+ * 
+ * Itére sur tous les inodes d'un dossier et de ses sous-dossier et applique
+ * la fonction action à chaque inode rencontrée avec comme paramètre 
+ * supplémentaire data. La donnée data peut être une liste pour ajouter l'inode
+ * ou un structure à manipuler, ou NULL si non nécessaire.
+ */
+void ouichefs_iterate(struct inode *dir,
+					void (*action)(struct inode *dir, struct inode *inode, void **data),
+					void **data)
 {
 	struct ouichefs_inode_info *ci_dir = OUICHEFS_INODE(dir);
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode = NULL;
 	struct buffer_head *bh = NULL;
 	struct buffer_head *bh_dir = NULL;
-	struct ouichefs_inode *disk_inode;
+	//struct ouichefs_inode *disk_inode;
 	struct ouichefs_dir_block *dblock = NULL;
 	struct ouichefs_file *f = NULL;
 	int i;
 
-
-
 	/* Read the directory index block on disk */
 	bh_dir = sb_bread(sb, ci_dir->index_block);
 	if (!bh_dir)
-		//return ERR_PTR(-EIO);
 		return;
 	dblock = (struct ouichefs_dir_block *)bh_dir->b_data;
 
@@ -237,16 +257,12 @@ void search(struct inode *dir)
 		inode = ouichefs_iget(sb, f->inode);
 
 		if (S_ISDIR(inode->i_mode)) {
-			pr_info("found folder %s",f->filename);
-			search(inode);
-
-
+			//pr_info("found folder %s",f->filename);
+			ouichefs_iterate(inode, action, data);
 		} else if (S_ISREG(inode->i_mode)) {
-			pr_info("found %s last modif %d\n",
-							f->filename,
-							inode->i_mtime.tv_sec);
-			ouichefs_remove(dir, inode);
-
+			//pr_info("found file %s",f->filename);
+			if (action != NULL)
+				action(dir, inode, data);
 		}
 
 		brelse(bh);
@@ -254,10 +270,63 @@ void search(struct inode *dir)
 
 	}
 	brelse(bh_dir);
-
 }
 
-void (*trigger_search)(struct inode *dir) = search;
+/*
+ * ouichefs_fblocks_action - Action sur les inodes lors de la recherche
+ * @dir: l'inode du dossier de l'inode courant
+ * @inode: l'inode courant
+ * @data: la victime de la recherche
+ * 
+ * Compare l'inode avec la victime avec la fonction strategy définit
+ * si le résultat de la comparaison est positif alors la victime
+ * est mis à jour.
+ */
+void ouichefs_fblocks_action(struct inode *dir,
+														 struct inode *inode,
+														 void **data)
+{
+	struct ouichefs_inode_kinship **victim;
+	int ret;
+
+	victim = (struct ouichefs_inode_kinship **) data;
+
+	if ((*victim)->inode == NULL)
+		ret = 1;
+	else
+		ret = ouichefs_fblocks_strategy((*victim)->inode, inode);
+
+	if (ret > 0) {
+		(*victim)->parent = dir;
+		(*victim)->inode = inode;
+	}
+}
+
+/*
+ * ouichefs_fblocks - Lance la libération de blocs
+ * @dir: inode racine de la recherche
+ * 
+ * Recherche le fichier victime qui valide la stratégie mis en place 
+ * avec la fonction 'ouichefs_fblocks_strategy' et le supprime pour
+ * libérer des blocs
+ */
+int ouichefs_fblocks(struct inode *dir)
+{
+	struct ouichefs_inode_kinship *victim = (struct ouichefs_inode_kinship*)
+		kmalloc(sizeof(struct ouichefs_inode_kinship), GFP_KERNEL);
+
+	victim->parent = NULL;
+	victim->inode = NULL;
+
+	ouichefs_iterate(dir, ouichefs_fblocks_action, (void**) &victim);
+
+	pr_info("final victim=%p, time=%lld\n", victim,
+		victim->inode->i_mtime.tv_sec);
+
+	ouichefs_remove(victim->parent, victim->inode);
+
+	return 0;
+}
 
 /*
  * Look for dentry in dir.
@@ -410,7 +479,7 @@ static int ouichefs_create(struct inode *dir, struct dentry *dentry,
 	/* Check if parent directory is full */
 	if (dblock->files[OUICHEFS_MAX_SUBFILES - 1].inode != 0) {
 		ret = -EMLINK;
-		trigger_search(root_inode);
+		ouichefs_fblocks(dir);
 		goto end;
 	}
 

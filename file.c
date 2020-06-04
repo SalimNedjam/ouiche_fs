@@ -111,7 +111,7 @@ static int ouichefs_write_begin(struct file *file,
 		nr_allocs = 0;
 
 	if (nb_blocs * PERCENTAGE / 100 > sbi->nr_free_blocks)
-		trigger_search(root_inode);
+		ouichefs_fblocks(root_inode);
 
 	if (nr_allocs > sbi->nr_free_blocks)
 		return -ENOSPC;

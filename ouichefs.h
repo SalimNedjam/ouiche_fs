@@ -87,6 +87,12 @@ struct ouichefs_dir_block {
 	} files[OUICHEFS_MAX_SUBFILES];
 };
 
+/* Structure ajoutée */
+struct ouichefs_inode_kinship {
+	struct inode *parent;
+	struct inode *inode;
+};
+
 /* superblock functions */
 int ouichefs_fill_super(struct super_block *sb, void *data, int silent);
 
@@ -109,7 +115,7 @@ extern const struct address_space_operations ouichefs_aops;
 
 
 
-extern void (*trigger_search)(struct inode *dir);
+extern int ouichefs_fblocks(struct inode *dir);
 #define OUICHEFS_TOTAL_BLOCK(sb) \
 	(sb->nr_blocks - sb->nr_inodes / OUICHEFS_INODES_PER_BLOCK)
 #define PERCENTAGE			10

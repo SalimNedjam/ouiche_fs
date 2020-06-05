@@ -279,10 +279,10 @@ void ouichefs_iterate(struct inode *dir,
 		if (S_ISDIR(inode->i_mode)) {
 			ouichefs_iterate(inode, action, data);
 		} else if (S_ISREG(inode->i_mode)) {
-			if (inode->i_count.counter == 0)
-				pr_info("found file unused %s\n", f->filename);
-			if (action != NULL)
+			iput(inode);
+			if (action != NULL) {
 				action(dir, inode, data);
+			}
 		}
 
 		brelse(bh);
@@ -308,6 +308,9 @@ void ouichefs_fblocks_action(struct inode *dir,
 {
 	struct ouichefs_inode_kinship **victim;
 	int ret;
+
+	if (inode->i_count.counter != 0)
+		return;
 
 	victim = (struct ouichefs_inode_kinship **) data;
 
@@ -344,6 +347,10 @@ int ouichefs_fblocks(struct inode *dir)
 
 	ouichefs_iterate(dir, ouichefs_fblocks_action, (void**) &victim);
 
+	/* Aucune victime trouvée, cas censé ne jamais arrivé */
+	if (victim->inode == NULL)
+		return -1;
+
 	pr_info("final victim=%p, time=%lld count=%d\n", victim,
 		victim->inode->i_mtime.tv_sec, victim->inode->i_count.counter);
 
@@ -359,6 +366,7 @@ int ouichefs_fblocks(struct inode *dir)
 		/* Sinon on supprime à partir du dentry */
 		vfs_unlink(victim->parent, dentry, &delegated_inode);
 	}
+	//ouichefs_destroy_inode(victim->inode);
 	dput(dentry);
 	
 	return ret;

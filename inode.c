@@ -335,6 +335,7 @@ int ouichefs_fblocks(struct inode *dir)
 	struct ouichefs_inode_kinship *victim;
 	struct dentry *dentry;
 	struct inode *delegated_inode = NULL;
+	int ret = 0;
 
 	victim = (struct ouichefs_inode_kinship*)
 		kmalloc(sizeof(struct ouichefs_inode_kinship), GFP_KERNEL);
@@ -348,13 +349,19 @@ int ouichefs_fblocks(struct inode *dir)
 
 	dentry = d_find_any_alias(victim->inode);
 	pr_info("victim name=%s, ptr=%p\n", dentry->d_iname, dentry);
-
-	if (dentry != NULL) 
+ 	if (dentry == NULL) {
+		/* Si un dentry n'existe pas pour l'inode victime on supprime simplement */
+		inode_lock(victim->inode);
+		ouichefs_remove(victim->parent, victim->inode);
+		inode_unlock(victim->inode);
+	}
+	else {
+		/* Sinon on supprime à partir du dentry */
 		vfs_unlink(victim->parent, dentry, &delegated_inode);
-
+	}
 	dput(dentry);
 	
-	return 0;
+	return ret;
 }
 
 /*

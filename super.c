@@ -46,7 +46,7 @@ static struct inode *ouichefs_alloc_inode(struct super_block *sb)
 	return &ci->vfs_inode;
 }
 
-static void ouichefs_destroy_inode(struct inode *inode)
+void ouichefs_destroy_inode(struct inode *inode)
 {
 	struct ouichefs_inode_info *ci;
 

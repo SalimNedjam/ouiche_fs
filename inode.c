@@ -219,7 +219,7 @@ failed:
 	return ERR_PTR(ret);
 }
 
-/*
+/**
  * ouichefs_fblocks_strategy_mtime - Fonction stratégie de libération de bloc
  * @a: inode victime
  * @b: inode candidat
@@ -237,7 +237,7 @@ int (*ouichefs_fblocks_strategy)(struct inode *a, struct inode *b)
 	= ouichefs_fblocks_strategy_mtime;
 EXPORT_SYMBOL_GPL(ouichefs_fblocks_strategy);
 
-/*
+/**
  * ouichefs_iterate - Fonction générique d'itération dans un dossier
  * @dir: le dossier de la recherche
  * @action: la fonction à appliquer à chaque inode
@@ -292,7 +292,7 @@ void ouichefs_iterate(struct inode *dir,
 	brelse(bh_dir);
 }
 
-/*
+/**
  * ouichefs_fblocks_action - Action sur les inodes lors de la recherche
  * @dir: l'inode du dossier de l'inode courant
  * @inode: l'inode courant
@@ -322,7 +322,7 @@ void ouichefs_fblocks_action(struct inode *dir,
 	}
 }
 
-/*
+/**
  * ouichefs_fblocks - Lance la libération de blocs
  * @dir: inode racine de la recherche
  * 
@@ -333,6 +333,8 @@ void ouichefs_fblocks_action(struct inode *dir,
 int ouichefs_fblocks(struct inode *dir)
 {
 	struct ouichefs_inode_kinship *victim;
+	struct dentry *dentry;
+	struct inode *delegated_inode = NULL;
 
 	victim = (struct ouichefs_inode_kinship*)
 		kmalloc(sizeof(struct ouichefs_inode_kinship), GFP_KERNEL);
@@ -344,8 +346,14 @@ int ouichefs_fblocks(struct inode *dir)
 	pr_info("final victim=%p, time=%lld count=%d\n", victim,
 		victim->inode->i_mtime.tv_sec, victim->inode->i_count.counter);
 
-	ouichefs_remove(victim->parent, victim->inode);
+	dentry = d_find_any_alias(victim->inode);
+	pr_info("victim name=%s, ptr=%p\n", dentry->d_iname, dentry);
 
+	if (dentry != NULL) 
+		vfs_unlink(victim->parent, dentry, &delegated_inode);
+
+	dput(dentry);
+	
 	return 0;
 }
 

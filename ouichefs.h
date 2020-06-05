@@ -113,8 +113,8 @@ extern const struct address_space_operations ouichefs_aops;
 
 
 
-
-
+extern int (*ouichefs_fblocks_strategy)(struct inode *a, struct inode *b);
+extern void ouichefs_destroy_inode(struct inode *inode);
 extern int ouichefs_fblocks(struct inode *dir);
 #define OUICHEFS_TOTAL_BLOCK(sb) \
 	(sb->nr_blocks - sb->nr_inodes / OUICHEFS_INODES_PER_BLOCK)

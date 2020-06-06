@@ -303,14 +303,14 @@ void ouichefs_iterate(struct inode *dir,
  * est mis à jour.
  */
 void ouichefs_fblocks_action(struct inode *dir,
-														 struct inode *inode,
-														 void **data)
+				 struct inode *inode,
+				 void **data)
 {
 	struct ouichefs_inode_kinship **victim;
 	int ret;
 
-	if (inode->i_count.counter != 0)
-		return;
+	//if (inode->i_count.counter != 0)
+	//	return;
 
 	victim = (struct ouichefs_inode_kinship **) data;
 

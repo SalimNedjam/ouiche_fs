@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# just some cool style
+ansi()          { echo -e "\e[${1}m${*:2}\e[0m"; }
+bold()          { ansi 1 "$@"; }
+underline()     { ansi 4 "$@"; }
+red()           { ansi 31 "$@"; }
+green()         { ansi 92 "$@"; }
+cyan()          { ansi 32 "$@"; }
+
+filename="big"
+
+bold "creating 127 files..."
+
+for i in {0..126}
+do
+  touch "file_$i"
+done
+
+green "press [ENTER] to create an big file"
+read -n 1
+
+dd if=/dev/zero of=$filename bs=1M count=1
+
+cyan "'$filename' file created"
+ls -al $filename
+
+green "press [ENTER] to create new file which will delete the big file"
+read -n 1
+
+touch new
+
+ls
+
+green "'$filename' file deleted"
+
+ls -al $filename
+

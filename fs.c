@@ -117,28 +117,28 @@ static int __init ouichefs_init(void)
 
 	major = register_chrdev(0, "ouichefs", &fops);
 	if (major < 0) {
-		pr_warn("[ERROR] Register device failcd: %d\n", major);
+		pr_warn("Register device failcd: %d\n", major);
 		return major;
 	}
-	pr_info("[INFO] ouichefs : Registered !\n");
+	pr_info("Registered !\n");
 
 
 	pClass = class_create(THIS_MODULE, "ouichefs");
 	if (IS_ERR(pClass)) {
-		pr_warn("[ERROR] Can't create class\n");
+		pr_warn("Can't create class\n");
 		goto error1;
 	}
-	pr_info("[INFO] ouichefs : Class created !\n");
+	pr_info("Class created !\n");
 
 	pClass->devnode = ouichefs_dev_devnode;
 
 	devNo = MKDEV(major, 0);
 	pDev = device_create(pClass, NULL, devNo, NULL, "ouichefs");
 	if (IS_ERR(pDev)) {
-		pr_warn("[ERROR] hello can't create device /dev/ouichefs\n");
+		pr_warn("hello can't create device /dev/ouichefs\n");
 		goto error2;
 	}
-	pr_info("[INFO] Device created\n");
+	pr_info("Device created\n");
 	pr_info("module loaded\n");
 end:
 	return ret;
@@ -153,13 +153,13 @@ static void __exit ouichefs_exit(void)
 	int ret;
 
 	device_destroy(pClass, devNo);
-	pr_warn("[INFO] Device removed\n");
+	pr_warn("Device removed\n");
 
 	class_destroy(pClass);
-	pr_warn("[INFO] Class removed\n");
+	pr_warn("Class removed\n");
 
 	unregister_chrdev(major, "ouichefs");
-	pr_warn("[INFO] Unregisted Device\n");
+	pr_warn("Unregisted Device\n");
 
 	ret = unregister_filesystem(&ouichefs_file_system_type);
 	if (ret)

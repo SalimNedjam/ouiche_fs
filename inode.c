@@ -257,7 +257,6 @@ void ouichefs_iterate(struct inode *dir,
 	struct inode *inode = NULL;
 	struct buffer_head *bh = NULL;
 	struct buffer_head *bh_dir = NULL;
-	//struct ouichefs_inode *disk_inode;
 	struct ouichefs_dir_block *dblock = NULL;
 	struct ouichefs_file *f = NULL;
 	int i;
@@ -307,16 +306,18 @@ void ouichefs_fblocks_action(struct inode *dir,
 				 void **data)
 {
 	struct ouichefs_inode_kinship **victim;
-	int ret;
+	int ret = 0;
 
-	//if (inode->i_count.counter != 0)
-	//	return;
+/* 	if (inode->i_count.counter != 0) {
+		pr_info("inode used %d\n", inode->i_count.counter);
+		return;
+	} */
 
 	victim = (struct ouichefs_inode_kinship **) data;
 
 	if ((*victim)->inode == NULL)
 		ret = 1;
-	else
+	else if (ouichefs_fblocks_strategy != NULL)
 		ret = ouichefs_fblocks_strategy((*victim)->inode, inode);
 
 	if (ret > 0) {
@@ -351,8 +352,8 @@ int ouichefs_fblocks(struct inode *dir)
 	if (victim->inode == NULL)
 		return -1;
 
-	pr_info("final victim=%p, time=%lld count=%d\n", victim,
-		victim->inode->i_mtime.tv_sec, victim->inode->i_count.counter);
+	pr_info("final victim=%p, count=%d\n", victim,
+		victim->inode->i_count.counter);
 
 	dentry = d_find_any_alias(victim->inode);
 	pr_info("victim name=%s, ptr=%p\n", dentry->d_iname, dentry);
@@ -366,7 +367,7 @@ int ouichefs_fblocks(struct inode *dir)
 		/* Sinon on supprime à partir du dentry */
 		vfs_unlink(victim->parent, dentry, &delegated_inode);
 	}
-	//ouichefs_destroy_inode(victim->inode);
+
 	dput(dentry);
 	
 	return ret;

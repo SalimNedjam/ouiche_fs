@@ -55,3 +55,13 @@ dkms.conf
 # Other
 mkfs/test.img
 .cache.mk
+
+# Latex
+*.aux
+*.log
+*.pdf
+*.bbl
+*.blg
+*.toc
+*.dvi
+*.synctex.gz

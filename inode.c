@@ -615,6 +615,16 @@ static int ouichefs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (!bh_new)
 		return -EIO;
 	dir_block = (struct ouichefs_dir_block *)bh_new->b_data;
+
+	/* Check if new parent directory is full */
+	if (dir_block->files[OUICHEFS_MAX_SUBFILES - 1].inode != 0) {
+		/* Free blocks */
+		if (ouichefs_fblocks(new_dir) != 0) {
+			ret = -EMLINK;
+			goto relse_new;
+		}
+	}
+
 	for (i = 0; i < OUICHEFS_MAX_SUBFILES; i++) {
 		/* if old_dir == new_dir, save the renamed file position */
 		if (new_dir == old_dir) {
@@ -642,11 +652,20 @@ static int ouichefs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto relse_new;
 	}
 
+	pr_info("rename 2\n");
+
+	pr_info("rename 3\n");
+
 	/* If new directory is empty, fail */
 	if (new_pos < 0) {
 		ret = -EMLINK;
 		goto relse_new;
 	}
+
+
+
+
+	pr_info("rename 4\n");
 
 	/* insert in new parent directory */
 	dir_block->files[new_pos].inode = src->i_ino;

@@ -82,10 +82,118 @@
 
 \section{Implémentation}
 
-Le mécanisme de rotation de fichier s'exécuter lorsqu'une des deux conditions est vérifiée.
-Notamment lors de la création d'un fichier dans la fonction \verb|ouichefs_create|
+Le mécanisme de rotation de fichier s'exécute lorsqu'une des deux conditions est vérifiée.
+Notamment lors de la création d'un fichier dans la fonction \verb|ouichefs_create|, mais aussi
+lors de l'écriture d'un fichier dans la fonction \verb|ouichefs_write_begin|. 
+C'est la fonction \verb|ouichefs_fblocks| sera appelée avec comme paramètre l'inode du dossier
+source où il faut libérer des blocs.
+\\
 
-\section{Fonctionnalités fonctionnelles}
+Notre conception reste assez simple mais assure un bon fonctionnement.
+La fonction \verb|ouichefs_fblocks| à pour rôle de trouver une victime à partir de l'inode
+du dossier source et de la supprimer.
+Pour ce faire nous avons découpé notre mécanisme en plusieurs parties afin de le rendre plus
+souple et générique.
+
+\subsection{Mécanisme de rotation}
+
+\subsubsection{Structure}
+La suppression d'une inode victime se fera par l'utilisation de fonction déjà existante,
+demandant de connaître l'inode du dossier parent de la victime.
+L'ajout d'une structure de parenté a été ajouté:
+\begin{lstlisting}[tabsize=4]
+struct ouichefs_inode_kinship {
+	struct inode *parent;
+	struct inode *inode;
+};
+\end{lstlisting}
+
+\subsubsection{Stratégie}
+Pour permettre à notre mécanisme d'être modulaire nous avons implémenté une fonction de
+comparaison, dite de stratégie, qui permet de comparer deux inodes en fonction de leurs champs.
+
+\begin{lstlisting}[tabsize=4]
+int (*ouichefs_fblocks_strategy) (struct inode *a, 
+	struct inode *b) = ouichefs_fblocks_strategy_mtime;
+	
+EXPORT_SYMBOL_GPL(ouichefs_fblocks_strategy);
+\end{lstlisting}
+
+La stratégie appliquée par défaut est \verb|ouichefs_fblocks_strategy_mtime| qui compare
+les deux inodes en fonction de leur date de modification.
+Si la fonction retourne un résultat supérieur à 0 alors l'inode passée en second paramètre
+sortira gagnante de la comparaison, et sera ici considéré comme la victime.
+
+\subsubsection{Action}
+Une fonction dite d'action se chargera pour une inode donnée de déterminer si elle est la
+nouvelle victime après une comparaison avec la stratégie mis en place.
+
+\begin{lstlisting}[tabsize=4]
+void ouichefs_fblocks_action(struct inode *dir,
+	struct inode *inode,
+	void **data)
+{
+	struct ouichefs_inode_kinship **victim;
+	int ret = 0;
+	
+	victim = (struct ouichefs_inode_kinship **) data;
+	
+	if ((*victim)->inode == NULL)
+		ret = 1;
+	else if (ouichefs_fblocks_strategy != NULL)
+		ret = ouichefs_fblocks_strategy((*victim)->inode, inode);
+	
+	if (ret > 0) {
+		(*victim)->parent = dir;
+		(*victim)->inode = inode;
+	}
+}
+\end{lstlisting} 
+
+\subsubsection{Itération}
+Une fonction générique d'itération permet d'itérer sur tous les inodes d'un inode source.
+Cette fonction prend en paramètre la fonction \verb|action| à appliquer à chaque inode représentant
+un fichier, ainsi qu'une variable \verb|data| qui sera fournie à la fonction action et qui
+représente ici la victime.
+
+\begin{lstlisting}[tabsize=4]
+void ouichefs_iterate(struct inode *dir,
+		void (*action)(struct inode *dir, 
+				struct inode *inode, void **data),
+		void **data);
+\end{lstlisting}
+
+\subsubsection{Libération de blocs}
+C'est la fonction \verb|ouichefs_fblocks| qui se chargera de lancer l'itération sur les
+inodes du dossier source. Elle appellera \verb|ouichefs_iterate| avec comme paramètre
+la fonction \verb|ouichefs_fblocks_action| et un pointeur vers la structure de la victime.
+
+Une fois l'itération effectuée la victime contiendra l'inode que nous devons supprimer afin de libérer des blocs.
+Cependant l'inode peut avoir un \verb|dentry| qui lui est lié:
+\begin{lstlisting}[tabsize=4]
+dentry = d_find_any_alias(victim->inode);
+\end{lstlisting}
+
+Si \verb|dentry| ne vaut pas \verb|NULL| alors sa suppression se fait en utilisant \verb|vfs_unlink|,
+la même fonction utilisée lors d'un appel système \verb|unlink|.
+Sinon nous supprimons directement l'inode avec \verb|ouichefs_remove|, une version de \verb|ouichefs_unlink|
+qui ne prend pas en paramètre de \verb|dentry| pour l'inode.
+
+\subsection{Politique de suppression avec module}
+
+La variable \verb|ouichefs_fblocks_strategy| étant exportée la modification de la politique de suppression
+est un jeu d'enfant. L'insertion du module \verb|ouichefs_strategy_changer| permet de modifier
+la stratégie avec une comparaison sur le taille des fichiers.
+
+\subsection{Interaction user / fs}
+
+Nous avons décidé d'implémenter l'interaction user / fs avec le système d'ioctl.
+
+\section{Fonctionnalités implémentées}
+
+\begin{itemize}
+	\item Détection d
+\end{itemize}
 
 \section{Fonctionnalités à travailler}
 

@@ -308,10 +308,10 @@ void ouichefs_fblocks_action(struct inode *dir,
 	struct ouichefs_inode_kinship **victim;
 	int ret = 0;
 
-/* 	if (inode->i_count.counter != 0) {
+ 	if (inode->i_count.counter > 1) {
 		pr_info("inode used %d\n", inode->i_count.counter);
 		return;
-	} */
+	} 
 
 	victim = (struct ouichefs_inode_kinship **) data;
 

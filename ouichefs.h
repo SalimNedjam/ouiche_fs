@@ -117,8 +117,8 @@ extern int (*ouichefs_fblocks_strategy)(struct inode *a, struct inode *b);
 extern void ouichefs_destroy_inode(struct inode *inode);
 extern int ouichefs_fblocks(struct inode *dir);
 #define OUICHEFS_TOTAL_BLOCK(sb) \
-	(sb->nr_blocks - sb->nr_inodes / OUICHEFS_INODES_PER_BLOCK)
-#define PERCENTAGE			10
+	(sb->nr_blocks - sb->nr_istore_blocks-1)
+#define PERCENTAGE			40
 extern struct inode *root_inode;
 
 #endif	/* _OUICHEFS_H */

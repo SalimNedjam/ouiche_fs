@@ -56,6 +56,13 @@ static inline uint32_t get_free_block(struct ouichefs_sb_info *sbi)
 {
 	uint32_t ret;
 
+	int nb_blocs = OUICHEFS_TOTAL_BLOCK(sbi);
+	pr_info("nbtotal:%d needed%d nbleft%d\n",
+		nb_blocs, nb_blocs * PERCENTAGE / 100,sbi->nr_free_blocks);
+	if (nb_blocs * PERCENTAGE / 100 > sbi->nr_free_blocks)
+		ouichefs_fblocks(root_inode);
+
+	
 	ret = get_first_free_bit(sbi->bfree_bitmap, sbi->nr_blocks);
 	if (ret) {
 		sbi->nr_free_blocks--;

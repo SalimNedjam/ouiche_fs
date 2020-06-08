@@ -37,7 +37,6 @@ static int ouichefs_remove(struct inode *dir, struct inode *inode)
 	uint32_t ino, bno;
 	int i, f_id = -1, nr_subs = 0;
 
-	pr_info("remove\n");
 
 	ino = inode->i_ino;
 	bno = OUICHEFS_INODE(inode)->index_block;
@@ -156,7 +155,6 @@ struct inode *ouichefs_iget(struct super_block *sb, unsigned long ino)
 	uint32_t inode_shift = ino % OUICHEFS_INODES_PER_BLOCK;
 	int ret;
 
-	pr_info("iget\n");
 
 	/* Fail if ino is out of range */
 	if (ino >= sbi->nr_inodes)
@@ -389,7 +387,6 @@ static struct dentry *ouichefs_lookup(struct inode *dir, struct dentry *dentry,
 	struct ouichefs_file *f = NULL;
 	int i;
 
-	pr_info("lookup\n");
 
 	/* Check filename length */
 	if (dentry->d_name.len > OUICHEFS_FILENAME_LEN)
@@ -436,7 +433,6 @@ static struct inode *ouichefs_new_inode(struct inode *dir, mode_t mode)
 	uint32_t ino, bno;
 	int ret;
 
-	pr_info("new inode\n");
 
 	/* Check mode before doing anything to avoid undoing everything */
 	if (!S_ISDIR(mode) && !S_ISREG(mode)) {
@@ -513,7 +509,6 @@ static int ouichefs_create(struct inode *dir, struct dentry *dentry,
 	struct buffer_head *bh, *bh2;
 	int ret = 0, i;
 
-	pr_info("create\n");
 
 	/* Check filename length */
 	if (strlen(dentry->d_name.name) > OUICHEFS_FILENAME_LEN)
@@ -600,7 +595,6 @@ static int ouichefs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct ouichefs_dir_block *dir_block = NULL;
 	int i, f_id = -1, new_pos = -1, ret, nr_subs, f_pos = -1;
 
-	pr_info("rename\n");
 
 	/* fail with these unsupported flags */
 	if (flags & (RENAME_EXCHANGE | RENAME_WHITEOUT))
@@ -652,9 +646,6 @@ static int ouichefs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto relse_new;
 	}
 
-	pr_info("rename 2\n");
-
-	pr_info("rename 3\n");
 
 	/* If new directory is empty, fail */
 	if (new_pos < 0) {
@@ -665,7 +656,6 @@ static int ouichefs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 
 
-	pr_info("rename 4\n");
 
 	/* insert in new parent directory */
 	dir_block->files[new_pos].inode = src->i_ino;
@@ -734,7 +724,6 @@ static int ouichefs_rmdir(struct inode *dir, struct dentry *dentry)
 	struct buffer_head *bh;
 	struct ouichefs_dir_block *dblock;
 
-	pr_info("rmdir\n");
 
 	/* If the directory is not empty, fail */
 	if (inode->i_nlink > 2)

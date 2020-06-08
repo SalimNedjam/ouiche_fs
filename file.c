@@ -100,21 +100,19 @@ static int ouichefs_write_begin(struct file *file,
 	struct ouichefs_sb_info *sbi = OUICHEFS_SB(file->f_inode->i_sb);
 	int err;
 	uint32_t nr_allocs = 0;
-	uint32_t nb_blocs = OUICHEFS_TOTAL_BLOCK(sbi);
 	/* Check if the write can be completed (enough space?) */
 	if (pos + len > OUICHEFS_MAX_FILESIZE)
-		return -ENOSPC;
+	return -ENOSPC;
 	nr_allocs = max(pos + len, file->f_inode->i_size) / OUICHEFS_BLOCK_SIZE;
 	if (nr_allocs > file->f_inode->i_blocks - 1)
 		nr_allocs -= file->f_inode->i_blocks - 1;
 	else
 		nr_allocs = 0;
 
-	if (nb_blocs * PERCENTAGE / 100 > sbi->nr_free_blocks)
-		ouichefs_fblocks(root_inode);
+	
 
 	if (nr_allocs > sbi->nr_free_blocks)
-		return -ENOSPC;
+	return -ENOSPC;
 
 	/* prepare the write */
 	err = block_write_begin(mapping, pos, len, flags, pagep,
@@ -125,6 +123,8 @@ static int ouichefs_write_begin(struct file *file,
 		       __func__, __LINE__);
 	}
 	return err;
+
+
 }
 
 /*

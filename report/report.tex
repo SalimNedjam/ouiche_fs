@@ -192,11 +192,30 @@ Nous avons décidé d'implémenter l'interaction user / fs avec le système d'io
 \section{Fonctionnalités implémentées}
 
 \begin{itemize}
-	\item Détection d
+	\item Déclenchement du mécanisme lors de la création d'un fichier dans un répertoire plein.
+	
+	\item Déclenchement du mécanisme lors du déplacement d'un fichier dans un répertoire plein.
+	
+	\item Déclenchement du mécanisme lors de l'écriture d'un fichier dans un répertoire où le stockage
+	à atteint sa limite.
+	
+	\item Suppression du fichier correspondant à la stratégie mis en place.
+	
+	\item Modification de la stratégie avec insertion de module.
+	
+	\item Déclenchement manuel du mécanisme de rotation avec ioctl.
 \end{itemize}
 
 \section{Fonctionnalités à travailler}
 
+\begin{itemize}
+	\item La fonction d'itération sur les inodes.
+\end{itemize}
+
 \section{Fonctionnalités non implémentées}
+
+\begin{itemize}
+	\item La détection de l'utilisation de l'inode par un autre processus.
+\end{itemize}
 
 \end{document}
